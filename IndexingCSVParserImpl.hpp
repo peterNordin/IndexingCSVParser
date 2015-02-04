@@ -93,7 +93,7 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
         rData.reserve(numRows); //!< @todo will this shrink reservation ?
 
         // Loop through each row
-        for (size_t r=startRow; r<numRows; ++r)
+        for (size_t r=startRow; r<startRow+numRows; ++r)
         {
             // Begin and end positions
             size_t b = mSeparatorPositions[r][col] + size_t(col > 0);
@@ -138,11 +138,11 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
         rData.reserve(numCols); //!< @todo will this shrink reservation ?
 
         // Begin position
-        size_t b = mSeparatorPositions[row][startCol];
+        size_t b = mSeparatorPositions[row][startCol] + 1*(startCol > 0);
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
         // Loop through each column on row
-        for (size_t c=startCol+1; c<=numCols; ++c)
+        for (size_t c=startCol+1; c<=startCol+numCols; ++c)
         {
             const size_t e = mSeparatorPositions[row][c];
             char buff[e-b+1];
