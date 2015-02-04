@@ -11,6 +11,16 @@
 
 using namespace std;
 
+template<typename T>
+void printVector(vector<T> &rVector)
+{
+    for (size_t i=0; i<rVector.size(); ++i)
+    {
+        cout << rVector[i] << " ";
+    }
+    cout << endl;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -46,7 +56,7 @@ int main(int argc, char *argv[])
 
     if (csv.numRows() < 100 && csv.numCols() < 100)
     {
-        cout << "---------- Contents ----------" << endl;
+        cout << "---------- Contents as string (position by position) ----------" << endl;
         bool parseOK;
         for (size_t r=0; r<csv.numRows(); ++r)
         {
@@ -57,45 +67,100 @@ int main(int argc, char *argv[])
             cout << endl;
         }
 
-        cout << endl << "---------- Rows ----------" << endl;
+        cout << endl << "---------- Fetching all indexed rows ----------" << endl;
         for (size_t r=0; r<csv.numRows(); ++r)
         {
             vector<double> row;
             bool rc = csv.getIndexedRowAs<double>(r, row);
             if (rc)
             {
-                for (size_t i=0; i<row.size(); ++i)
-                {
-                    cout << row[i] << " ";
-                }
+                printVector(row);
             }
             else
             {
-                cout << "There were errors (aborting) parsing row: " << r;
+                cout << "There were errors (aborting) parsing row: " << r << endl;
             }
-            cout << endl;
         }
 
-        cout << endl << "---------- Cols ----------" << endl;
+        cout << endl << "---------- Fetching Rows Columns 0->"<< csv.numCols()/2-1 << " ----------" << endl;
+        for (size_t r=0; r<csv.numRows(); ++r)
+        {
+            vector<double> row;
+            bool rc = csv.getIndexedRowColumnRangeAs<double>(r, 0, csv.numCols(r)/2, row);
+            if (rc)
+            {
+                printVector(row);
+            }
+            else
+            {
+                cout << "There were errors (aborting) parsing row: " << r << endl;
+            }
+        }
+
+        cout << endl << "---------- Fetching Rows Columns " << csv.numCols()/2 << "->" << csv.numCols()-1 << " ----------" << endl;
+        for (size_t r=0; r<csv.numRows(); ++r)
+        {
+            vector<double> row;
+            bool rc = csv.getIndexedRowColumnRangeAs<double>(r, csv.numCols(r)/2, csv.numCols()-csv.numCols(r)/2, row);
+            if (rc)
+            {
+                printVector(row);
+            }
+            else
+            {
+                cout << "There were errors (aborting) parsing row: " << r << endl;
+            }
+        }
+
+
+        cout << endl << "---------- Fetching all indexed columns (printed transposed) ----------" << endl;
         for (size_t c=0; c<csv.numCols(); ++c)
         {
             vector<double> col;
             bool rc = csv.getIndexedColumnAs<double>(c, col);
             if (rc)
             {
-                for (size_t i=0; i<col.size(); ++i)
-                {
-                    cout << col[i] << " ";
-                }
+                printVector(col);
             }
             else
             {
-                cout << "There were errors (aborting) parsing column: " << c;
+                cout << "There were errors (aborting) parsing column: " << c << endl;
             }
-            cout << endl;
         }
 
-        cout << endl << "---------- Get non-indexed rows ----------" << endl;
+        cout << endl << "---------- Fetching Columns Rows: 0->" << csv.numRows()/2-1 << " (printed transposed) ----------" << endl;
+        for (size_t c=0; c<csv.numCols(); ++c)
+        {
+            vector<double> col;
+            bool rc = csv.getIndexedColumnRowRangeAs<double>(c, 0, csv.numRows()/2, col);
+            if (rc)
+            {
+                printVector(col);
+            }
+            else
+            {
+                cout << "There were errors (aborting) parsing column: " << c << endl;
+            }
+        }
+
+        cout << endl << "---------- Fetching Columns Rows: " << csv.numRows()/2 << "->" << csv.numRows()-1 << " (printed transposed) ----------" << endl;
+        for (size_t c=0; c<csv.numCols(); ++c)
+        {
+            vector<double> col;
+            bool rc = csv.getIndexedColumnRowRangeAs<double>(c, csv.numRows()/2, csv.numRows()-csv.numRows()/2 , col);
+            if (rc)
+            {
+                printVector(col);
+            }
+            else
+            {
+                cout << "There were errors (aborting) parsing column: " << c << endl;
+            }
+        }
+
+
+
+        cout << endl << "---------- Get non-indexed rows one by one until EOF ----------" << endl;
         csv.rewindFile();
         csv.readUntilData();
         while (csv.hasMoreDataRows())
