@@ -37,6 +37,8 @@ int main(int argc, char *argv[])
     char sep = csv.autoSetSeparatorChar(possibleSeparators);
     cout << "Choosing separator char: " << sep << endl;
 
+    //csv.setSeparatorChar(';');
+
     // Index the file
     csv.indexFile();
 
@@ -77,8 +79,8 @@ int main(int argc, char *argv[])
         cout << endl << "---------- Cols ----------" << endl;
         for (size_t c=0; c<csv.numCols(); ++c)
         {
-            vector<long int> col;
-            bool rc = csv.getIndexedColumnAs<long int>(c, col);
+            vector<double> col;
+            bool rc = csv.getIndexedColumnAs<double>(c, col);
             if (rc)
             {
                 for (size_t i=0; i<col.size(); ++i)

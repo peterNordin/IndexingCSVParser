@@ -40,13 +40,16 @@ public:
     size_t numRows() const;
     size_t numCols(size_t row=0) const;
     bool allRowsHaveSameNumCols() const;
+    void minMaxNumCols(size_t &rMin, size_t &rMax);
 
     bool getIndexedColumn(const size_t col, std::vector<std::string> &rData);
     bool getIndexedRow(const size_t row, std::vector<std::string> &rData);
     std::string getIndexedPos(const size_t row, const size_t col, bool &rParseOK);
 
     template <typename T> bool getIndexedColumnAs(const size_t col, std::vector<T> &rData);
+    template <typename T> bool getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData);
     template <typename T> bool getIndexedRowAs(const size_t row, std::vector<T> &rData);
+    template <typename T> bool getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData);
     template <typename T> T getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK);
 
     // ----- Non-indexing access methods -----

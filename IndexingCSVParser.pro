@@ -9,7 +9,6 @@ SOURCES += main.cpp \
     IndexingCSVParser.cpp
 
 HEADERS += \
-    Converters.hpp \
     IndexingCSVParser.h \
     IndexingCSVParserImpl.hpp
 

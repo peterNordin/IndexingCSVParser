@@ -3,7 +3,7 @@
 //! @author Peter Nordin
 //! @date   2015-02-03
 //!
-//! @brief Contains the header only (template) implementation of the IndexingCSVParser
+//! @brief Contains the header only (template) implementation of the IndexingCSVParser and utility template functions
 //!
 
 #ifndef INDEXINGCSVPARSERIMPL_HPP
@@ -11,10 +11,62 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include "Converters.hpp"
+#include <string>
 
 namespace indcsvp
 {
+
+//! @brief The default converter template function
+//! @details This function will allways fail, template speciallisations for each type are required
+//! @tparam T The type that we want to interpret the contests of pBuffer as.
+//! @param[in] pBuff The character buffer to convert
+//! @param[out] rIsOK Reference to bool flag tellig you if parsing completed successfully
+//! @returns Type default constructed value;
+template <typename T>
+T converter(const char* pBuff, bool &rIsOK)
+{
+    rIsOK = false;
+    return T();
+}
+
+//! @brief The std::string converter speciallized template function
+//! @param[in] pBuff The character buffer to convert
+//! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
+//! @returns The contents of pBuff as a std::string
+template<> inline
+std::string converter<std::string>( const char* pBuff, bool &rIsOK)
+{
+    rIsOK = true;
+    return std::string(pBuff);
+}
+
+template<> inline
+double converter<double>( const char* pBuff, bool &rIsOK)
+{
+    char *pEnd;
+    double d = std::strtod(pBuff, &pEnd);
+    rIsOK = (*pEnd == '\0');
+    return d;
+}
+
+template<> inline
+unsigned long int converter<unsigned long int>( const char* pBuff, bool &rIsOK)
+{
+    char *pEnd;
+    long int ul = strtoul(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
+    rIsOK = (*pEnd == '\0');
+    return ul;
+}
+
+template<> inline
+long int converter<long int>( const char* pBuff, bool &rIsOK)
+{
+    char *pEnd;
+    long int i = strtol(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
+    rIsOK = (*pEnd == '\0');
+    return i;
+}
+
 
 //! @brief Peek help function to peek at the next character in the file
 //! @param[in] pStream The stream too peek in
@@ -26,18 +78,22 @@ inline int peek(FILE *pStream)
     return c;
 }
 
-
-
 template <typename T>
 bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rData)
 {
-    if (col < numCols(0))
+    return IndexingCSVParser::getIndexedColumnRowRangeAs<T>(col, 0, numRows(), rData);
+}
+
+template <typename T>
+bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData)
+{
+    // Assume all rows have same num cols
+    if (col < numCols(startRow))
     {
-        const size_t nr = numRows();
-        rData.reserve(nr); //!< @todo will this shrink reservation ?
+        rData.reserve(numRows); //!< @todo will this shrink reservation ?
 
         // Loop through each row
-        for (size_t r=0; r<nr; ++r)
+        for (size_t r=startRow; r<numRows; ++r)
         {
             // Begin and end positions
             size_t b = mSeparatorPositions[r][col] + size_t(col > 0);
@@ -71,17 +127,22 @@ bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rDa
 template <typename T>
 bool IndexingCSVParser::getIndexedRowAs(const size_t row, std::vector<T> &rData)
 {
+    return IndexingCSVParser::getIndexedRowColumnRangeAs<T>(row,0,numCols(row),rData);
+}
+
+template <typename T>
+bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData)
+{
     if (row < mSeparatorPositions.size())
     {
-        const size_t nc = numCols(row);
-        rData.reserve(nc); //!< @todo will this shrink reservation ?
+        rData.reserve(numCols); //!< @todo will this shrink reservation ?
 
         // Begin position
-        size_t b = mSeparatorPositions[row][0];
+        size_t b = mSeparatorPositions[row][startCol];
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
         // Loop through each column on row
-        for (size_t c=1; c<=nc; ++c)
+        for (size_t c=startCol+1; c<=numCols; ++c)
         {
             const size_t e = mSeparatorPositions[row][c];
             char buff[e-b+1];

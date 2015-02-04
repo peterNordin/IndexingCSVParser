@@ -97,6 +97,7 @@ void IndexingCSVParser::closeFile()
         fclose(mpFile);
         mpFile = 0;
     }
+    mSeparatorPositions.clear();
 }
 
 //! @brief Rewind the file pointer to the beginning of the file
@@ -110,6 +111,7 @@ void IndexingCSVParser::indexFile()
 {
     rewind(mpFile);
     readUntilData();
+    mSeparatorPositions.clear();
 
     mSeparatorPositions.reserve(100); //!< @todo guess
     size_t lastLineNumSeparators = 20;
@@ -187,6 +189,17 @@ bool IndexingCSVParser::allRowsHaveSameNumCols() const
         }
     }
     return true;
+}
+
+
+void IndexingCSVParser::minMaxNumCols(size_t &rMin, size_t &rMax)
+{
+    rMin = -1; rMax =0;
+    for (size_t r=0; r<mSeparatorPositions.size(); ++r)
+    {
+        rMin = std::min(rMin, mSeparatorPositions[r].size());
+        rMax = std::max(rMax, mSeparatorPositions[r].size());
+    }
 }
 
 //! @brief Extract the data of a given indexed column (as std::string)
