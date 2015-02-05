@@ -78,6 +78,60 @@ inline int peek(FILE *pStream)
     return c;
 }
 
+//! @brief Character buffer help class, with automatic memmory dealocation and smart reallocation
+class CharBuffer
+{
+public:
+    CharBuffer() : mpCharArray(0), mSize(0) {}
+    CharBuffer(size_t size) : mpCharArray(0), mSize(0) {resize(size);}
+    ~CharBuffer()
+    {
+        if (mpCharArray)
+        {
+            delete[] mpCharArray;
+        }
+    }
+
+    //! @brief Reallocate the buffer memmory (but only if new size is larger then before)
+    //! @param[in] size The desired buffer size (the number of bytes to allocate)
+    //! @returns true if reallocation was a success or if no reallocation was necessary, false if reallocation failed
+    inline bool resize(size_t size)
+    {
+        if (size > mSize)
+        {
+            mpCharArray = static_cast<char*>(realloc(mpCharArray, size));
+            if (mpCharArray)
+            {
+                mSize = size;
+                return true;
+            }
+            else
+            {
+                mSize = 0;
+                return false;
+            }
+        }
+        // Lets keep the previously allocated memmory as buffer (to avoid time consuming realloc)
+        return true;
+    }
+
+    //! @brief Returns the actual character buffer
+    inline char* buff()
+    {
+        return mpCharArray;
+    }
+
+    //! @brief Returns the current buffer size
+    inline size_t size()
+    {
+        return mSize;
+    }
+
+protected:
+    char *mpCharArray;
+    size_t mSize;
+};
+
 template <typename T>
 bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rData)
 {
@@ -90,7 +144,11 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
     // Assume all rows have same num cols
     if (col < numCols(startRow))
     {
-        rData.reserve(numRows); //!< @todo will this shrink reservation ?
+        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        rData.reserve(numRows);
+
+        // Temporary buffer object
+        CharBuffer cb;
 
         // Loop through each row
         for (size_t r=startRow; r<startRow+numRows; ++r)
@@ -102,13 +160,13 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
             std::fseek(mpFile, b, SEEK_SET);
 
             // Extract data
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            cb.resize(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             // Push back data
             if (rc)
             {
                 bool parseOK;
-                rData.push_back(converter<T>(buff, parseOK));
+                rData.push_back(converter<T>(cb.buff(), parseOK));
                 if (!parseOK)
                 {
                     return false;
@@ -135,22 +193,25 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 {
     if (row < mSeparatorPositions.size())
     {
-        rData.reserve(numCols); //!< @todo will this shrink reservation ?
+        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        rData.reserve(numCols);
 
         // Begin position
         size_t b = mSeparatorPositions[row][startCol] + 1*(startCol > 0);
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
+        // Character buffer for extravtion and parsing
+        CharBuffer cb;
         // Loop through each column on row
         for (size_t c=startCol+1; c<=startCol+numCols; ++c)
         {
             const size_t e = mSeparatorPositions[row][c];
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            cb.resize(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
                 bool parseOK;
-                rData.push_back(converter<T>(buff, parseOK));
+                rData.push_back(converter<T>(cb.buff(), parseOK));
                 if (!parseOK)
                 {
                     return false;

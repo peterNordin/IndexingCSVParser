@@ -211,7 +211,10 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
     if (col < numCols(0))
     {
         const size_t nr = numRows();
-        rData.reserve(nr); //!< @todo will this shrink reservation ?
+        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        rData.reserve(nr);
+
+        CharBuffer cb;
 
         // Loop through each row
         for (size_t r=0; r<nr; ++r)
@@ -223,12 +226,12 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
             fseek(mpFile, b, SEEK_SET);
 
             // Extract data
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            cb.resize(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             // Push back data
             if (rc)
             {
-                rData.push_back(buff);
+                rData.push_back(cb.buff());
             }
             else
             {
@@ -249,21 +252,25 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
     if (row < mSeparatorPositions.size())
     {
         const size_t nc = numCols(row);
-        rData.reserve(nc); //!< @todo will this shrink reservation ?
+        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        rData.reserve(nc);
 
         // Begin position
         size_t b = mSeparatorPositions[row][0];
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
+        // Character buffer for extraction
+        CharBuffer cb;
+
         // Loop through each column on row
         for (size_t c=1; c<=nc; ++c)
         {
             const size_t e = mSeparatorPositions[row][c];
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            cb.resize(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
-                rData.push_back(buff);
+                rData.push_back(cb.buff());
             }
             else
             {
@@ -295,12 +302,12 @@ string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool
             size_t e = mSeparatorPositions[row][col+1];
             fseek(mpFile, b, SEEK_SET);
 
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            CharBuffer cb(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
                 rParseOK = true;
-                return string(buff);
+                return string(cb.buff());
             }
             else
             {
@@ -316,6 +323,8 @@ string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool
 bool IndexingCSVParser::getRow(std::vector<string> &rData)
 {
     bool isSuccess = true;
+    CharBuffer cb;
+
     size_t b = ftell(mpFile);
     while (true)
     {
@@ -326,11 +335,11 @@ bool IndexingCSVParser::getRow(std::vector<string> &rData)
         {
             // Rewind file pointer to start of field
             fseek(mpFile, b, SEEK_SET);
-            char buff[e-b+1];
-            char* rc = fgets(buff, e-b+1, mpFile);
+            cb.resize(e-b+1);
+            char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
-                rData.push_back(buff);
+                rData.push_back(cb.buff());
             }
             else
             {
