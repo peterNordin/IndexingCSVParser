@@ -1,12 +1,12 @@
 //!
-//! @file   IndexingCSVParser.cpp
+//! @file   indexingcsvparser.cpp
 //! @author Peter Nordin
 //! @date   2015-02-03
 //!
 //! @brief Contains some of the IndexingCSVParser implementation
 //!
 
-#include "IndexingCSVParser.h"
+#include "indexingcsvparser/indexingcsvparser.h"
 
 #include <string>
 #include <vector>

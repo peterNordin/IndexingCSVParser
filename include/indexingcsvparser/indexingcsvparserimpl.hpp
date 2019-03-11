@@ -1,5 +1,5 @@
 //!
-//! @file   IndexingCSVParserImpl.hpp
+//! @file   indexingcsvparserimpl.hpp
 //! @author Peter Nordin
 //! @date   2015-02-03
 //!

@@ -1,5 +1,5 @@
 //!
-//! @file   IndexingCSVParser.h
+//! @file   indexingcsvparser.h
 //! @author Peter Nordin
 //! @date   2015-02-03
 //!
@@ -71,6 +71,6 @@ protected:
 }
 
 // Include the header-only implementation (template functions and methods)
-#include "IndexingCSVParserImpl.hpp"
+#include "indexingcsvparserimpl.hpp"
 
 #endif // INDEXINGCSVPARSER_H
