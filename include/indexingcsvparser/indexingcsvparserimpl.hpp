@@ -67,12 +67,24 @@ double converter<double>(char* pBuff, bool &rIsOK)
 }
 
 template<> inline
+float converter<float>(char* pBuff, bool &rIsOK)
+{
+    return static_cast<float>(converter<double>(pBuff, rIsOK));
+}
+
+template<> inline
 unsigned long int converter<unsigned long int>(char* pBuff, bool &rIsOK)
 {
     char *pEnd;
-    long int ul = strtoul(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
+    unsigned long int ul = strtoul(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
     rIsOK = (*pEnd == '\0');
     return ul;
+}
+
+template<> inline
+unsigned int converter<unsigned int>(char* pBuff, bool &rIsOK)
+{
+    return static_cast<unsigned int>(converter<unsigned long int>(pBuff, rIsOK));
 }
 
 template<> inline
@@ -84,6 +96,11 @@ long int converter<long int>(char* pBuff, bool &rIsOK)
     return i;
 }
 
+template<> inline
+int converter<int>(char* pBuff, bool &rIsOK)
+{
+    return static_cast<int>(converter<long int>(pBuff, rIsOK));
+}
 
 //! @brief Peek help function to peek at the next character in the file
 //! @param[in] pStream The stream too peek in
