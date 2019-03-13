@@ -1,4 +1,3 @@
 *~
 *.pro.user*
-*.exe
-IndexingCSVParser
+CMakeLists.txt.user
