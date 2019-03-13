@@ -12,6 +12,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 
 using namespace std;
 using namespace indcsvp;
@@ -103,6 +104,9 @@ size_t IndexingCSVParser::getNumLinesToSkip() const
 //! @returns true if the files was opened successfully else false
 bool IndexingCSVParser::openFile(const char *filePath)
 {
+    if (mpFile != 0) {
+        closeFile();
+    }
     mpFile = fopen(filePath, "rb");
     return (mpFile != 0);
 }
@@ -115,7 +119,7 @@ void IndexingCSVParser::closeFile()
         fclose(mpFile);
         mpFile = 0;
     }
-    mSeparatorPositions.clear();
+    mSeparatorMatrix.clear();
 }
 
 //! @brief Rewind the file pointer to the beginning of the file
@@ -129,9 +133,9 @@ void IndexingCSVParser::indexFile()
 {
     rewindFile();
     readUntilData();
-    mSeparatorPositions.clear();
+    mSeparatorMatrix.clear();
 
-    mSeparatorPositions.reserve(100); //!< @todo guess
+    mSeparatorMatrix.reserve(100); //!< @todo guess
     size_t lastLineNumSeparators = 20;
 
     // We register the position in the file before we read the char, as that will advance the file pointer
@@ -140,8 +144,8 @@ void IndexingCSVParser::indexFile()
     while (c!=EOF)
     {
         // Append new line, but we will work with a reference
-        mSeparatorPositions.push_back(vector<size_t>());
-        vector<size_t> &rLine = mSeparatorPositions.back();
+        mSeparatorMatrix.push_back(vector<size_t>());
+        vector<size_t> &rLine = mSeparatorMatrix.back();
         rLine.reserve(lastLineNumSeparators);
 
         // Register Start of line position
@@ -207,7 +211,7 @@ void IndexingCSVParser::indexFile()
 //! @returns The number of indexed rows
 size_t IndexingCSVParser::numRows() const
 {
-    return mSeparatorPositions.size();
+    return mSeparatorMatrix.size();
 }
 
 //! @brief Returns the number of indexed columns for a particular row
@@ -216,9 +220,9 @@ size_t IndexingCSVParser::numRows() const
 //! @returns The number of indexed columns on the requested row
 size_t IndexingCSVParser::numCols(size_t row) const
 {
-    if (row < mSeparatorPositions.size())
+    if (row < mSeparatorMatrix.size())
     {
-        return mSeparatorPositions[row].size()-1;
+        return mSeparatorMatrix[row].size()-1;
     }
     return 0;
 }
@@ -227,8 +231,8 @@ size_t IndexingCSVParser::numCols(size_t row) const
 //! @returns true if all rows have the same number of columns, else returns false
 bool IndexingCSVParser::allRowsHaveSameNumCols() const
 {
-    size_t nCols = numCols(0);
-    for (size_t r=0; r<mSeparatorPositions.size(); ++r)
+    const size_t nCols = numCols(0);
+    for (size_t r=0; r<mSeparatorMatrix.size(); ++r)
     {
         if (numCols(r) != nCols)
         {
@@ -241,18 +245,22 @@ bool IndexingCSVParser::allRowsHaveSameNumCols() const
 
 void IndexingCSVParser::minMaxNumCols(size_t &rMin, size_t &rMax)
 {
-    rMin = -1; rMax =0;
-    for (size_t r=0; r<mSeparatorPositions.size(); ++r)
+    rMin = std::numeric_limits<size_t>::max();
+    rMax = 0;
+    for (size_t r=0; r<mSeparatorMatrix.size(); ++r)
     {
-        rMin = std::min(rMin, mSeparatorPositions[r].size());
-        rMax = std::max(rMax, mSeparatorPositions[r].size());
+        rMin = std::min(rMin, mSeparatorMatrix[r].size());
+        rMax = std::max(rMax, mSeparatorMatrix[r].size());
     }
+    // Do not count end of line separator
+    rMin -= 1;
+    rMax -= 1;
 }
 
 //! @brief Extract the data of a given indexed column (as std::string)
 //! @param[in] col The column index (0-based)
 //! @param[in,out] rData The data vector to append column data to
-//! @returns true if no errors occured, else false
+//! @returns true if no errors occurred, else false
 bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &rData)
 {
     if (col < numCols(0))
@@ -267,8 +275,8 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
         for (size_t r=0; r<nr; ++r)
         {
             // Begin and end positions
-            size_t b = mSeparatorPositions[r][col] + size_t(col > 0);
-            size_t e = mSeparatorPositions[r][col+1];
+            size_t b = mSeparatorMatrix[r][col] + size_t(col > 0);
+            size_t e = mSeparatorMatrix[r][col+1];
             // Move file ptr
             fseek(mpFile, b, SEEK_SET);
 
@@ -296,14 +304,14 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
 //! @returns true if no errors occured, else false
 bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rData)
 {
-    if (row < mSeparatorPositions.size())
+    if (row < mSeparatorMatrix.size())
     {
         const size_t nc = numCols(row);
         // Reserve data (will only increase reserved memmory if needed, not shrink)
         rData.reserve(nc);
 
         // Begin position
-        size_t b = mSeparatorPositions[row][0];
+        size_t b = mSeparatorMatrix[row][0];
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
         // Character buffer for extraction
@@ -312,7 +320,7 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
         // Loop through each column on row
         for (size_t c=1; c<=nc; ++c)
         {
-            const size_t e = mSeparatorPositions[row][c];
+            const size_t e = mSeparatorMatrix[row][c];
             cb.resize(e-b+1);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
@@ -325,7 +333,7 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
             }
 
             // Update b for next field, skipping the character itself
-            b = mSeparatorPositions[row][c]+1;
+            b = mSeparatorMatrix[row][c]+1;
             // Move the file ptr, 1 char (gobble the separator)
             fgetc(mpFile);
         }
@@ -340,13 +348,13 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
 //! @returns The value at the requested position as std::string or empty if position does not exist
 string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool &rParseOK)
 {
-    if (row < mSeparatorPositions.size())
+    if (row < mSeparatorMatrix.size())
     {
-        if (col < mSeparatorPositions[row].size())
+        if (col+1 < mSeparatorMatrix[row].size())
         {
             // Begin and end positions
-            size_t b = mSeparatorPositions[row][col] + size_t(col > 0);
-            size_t e = mSeparatorPositions[row][col+1];
+            size_t b = mSeparatorMatrix[row][col] + size_t(col > 0);
+            size_t e = mSeparatorMatrix[row][col+1];
             fseek(mpFile, b, SEEK_SET);
 
             CharBuffer cb(e-b+1);
@@ -421,7 +429,7 @@ bool IndexingCSVParser::getRow(std::vector<string> &rData)
 //! @returns true if more rows are waiting, returns false if filpe pointer has reached EOF
 bool IndexingCSVParser::hasMoreDataRows()
 {
-    return !feof(mpFile);
+    return feof(mpFile) == 0;
 }
 
 //! @brief Gobble the initial number of lines to skip and lines beginning with the comment character

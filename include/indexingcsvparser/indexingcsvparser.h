@@ -65,7 +65,7 @@ protected:
     char mSeparatorChar;    //!< @brief The chosen separator character
     char mCommentChar;      //!< @brief The chosen comment character
     size_t mNumSkipLines;   //!< @brief The initial lines to skip
-    std::vector< std::vector<size_t> > mSeparatorPositions; //!< @brief The index of separators
+    std::vector< std::vector<size_t> > mSeparatorMatrix; //!< @brief The index of separators
 };
 
 }

@@ -172,8 +172,8 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
         for (size_t r=startRow; r<startRow+numRows; ++r)
         {
             // Begin and end positions
-            size_t b = mSeparatorPositions[r][col] + size_t(col > 0);
-            size_t e = mSeparatorPositions[r][col+1];
+            size_t b = mSeparatorMatrix[r][col] + size_t(col > 0);
+            size_t e = mSeparatorMatrix[r][col+1];
             // Move file ptr
             std::fseek(mpFile, b, SEEK_SET);
 
@@ -209,13 +209,13 @@ bool IndexingCSVParser::getIndexedRowAs(const size_t row, std::vector<T> &rData)
 template <typename T>
 bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData)
 {
-    if (row < mSeparatorPositions.size())
+    if (row < mSeparatorMatrix.size())
     {
         // Reserve data (will only increase reserved memmory if needed, not shrink)
         rData.reserve(numCols);
 
         // Begin position
-        size_t b = mSeparatorPositions[row][startCol] + 1*(startCol > 0);
+        size_t b = mSeparatorMatrix[row][startCol] + 1*(startCol > 0);
         // Move file ptr
         fseek(mpFile, b, SEEK_SET);
         // Character buffer for extravtion and parsing
@@ -223,7 +223,7 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
         // Loop through each column on row
         for (size_t c=startCol+1; c<=startCol+numCols; ++c)
         {
-            const size_t e = mSeparatorPositions[row][c];
+            const size_t e = mSeparatorMatrix[row][c];
             cb.resize(e-b+1);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
@@ -241,7 +241,7 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
             }
 
             // Update b for next field, skipping the character itself
-            b = mSeparatorPositions[row][c]+1;
+            b = mSeparatorMatrix[row][c]+1;
             // Move the file ptr, 1 char (gobble the separator)
             fgetc(mpFile);
         }
@@ -259,13 +259,13 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 template <typename T>
 T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK)
 {
-    if (row < mSeparatorPositions.size())
+    if (row < mSeparatorMatrix.size())
     {
-        if (col < mSeparatorPositions[row].size())
+        if (col+1 < mSeparatorMatrix[row].size())
         {
             // Begin and end positions
-            size_t b = mSeparatorPositions[row][col] + size_t(col > 0);
-            size_t e = mSeparatorPositions[row][col+1];
+            size_t b = mSeparatorMatrix[row][col] + size_t(col > 0);
+            size_t e = mSeparatorMatrix[row][col+1];
             fseek(mpFile, b, SEEK_SET);
 
             CharBuffer cb(e-b+1);
