@@ -17,7 +17,7 @@
 using namespace std;
 using namespace indcsvp;
 
-//! @brief Help function that gobbels all characters on a line
+//! @brief Help function that gobbles all characters on a line
 //! @param[in] pFile The file object to gobble from
 void discardLine(FILE *pFile)
 {
@@ -201,7 +201,7 @@ void IndexingCSVParser::indexFile()
             c = fgetc(mpFile);
         }
 
-        // Remeber the length of the line (to reserve relevant amount of memmory next time)
+        // Remember the length of the line (to reserve relevant amount of memmory next time)
         lastLineNumSeparators =  rLine.size();
     }
 }
@@ -301,13 +301,13 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
 //! @brief Extract the data of a given indexed row (as std::string)
 //! @param[in] row The row index (0-based)
 //! @param[in,out] rData The data vector to append row data to
-//! @returns true if no errors occured, else false
+//! @returns true if no errors occurred, else false
 bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rData)
 {
     if (row < mSeparatorMatrix.size())
     {
         const size_t nc = numCols(row);
-        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        // Reserve data (will only increase reserved memory if needed, not shrink)
         rData.reserve(nc);
 
         // Begin position
@@ -425,8 +425,8 @@ bool IndexingCSVParser::getRow(std::vector<string> &rData)
     //! @todo try to index line first before extracting data, might be faster since we can reserve (maybe)
 }
 
-//! @brief Check if more data rows are availible for extraction (for non-indexed files)
-//! @returns true if more rows are waiting, returns false if filpe pointer has reached EOF
+//! @brief Check if more data rows are available for extraction (for non-indexed files)
+//! @returns true if more rows are waiting, returns false if file pointer has reached EOF
 bool IndexingCSVParser::hasMoreDataRows()
 {
     return feof(mpFile) == 0;

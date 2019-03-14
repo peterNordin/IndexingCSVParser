@@ -31,10 +31,10 @@ inline void replaceDecimalComma(char* pBuff)
 }
 
 //! @brief The default converter template function
-//! @details This function will allways fail, template speciallisations for each type are required
+//! @details This function will always fail, template specialization for each type are required
 //! @tparam T The type that we want to interpret the contests of pBuffer as.
 //! @param[in] pBuff The character buffer to convert
-//! @param[out] rIsOK Reference to bool flag tellig you if parsing completed successfully
+//! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
 //! @returns Type default constructed value;
 template <typename T>
 T converter(char* pBuff, bool &rIsOK)
@@ -43,7 +43,7 @@ T converter(char* pBuff, bool &rIsOK)
     return T();
 }
 
-//! @brief The std::string converter speciallized template function
+//! @brief The std::string converter specialized template function
 //! @param[in] pBuff The character buffer to convert
 //! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
 //! @returns The contents of pBuff as a std::string
@@ -112,7 +112,7 @@ inline int peek(FILE *pStream)
     return c;
 }
 
-//! @brief Character buffer help class, with automatic memmory dealocation and smart reallocation
+//! @brief Character buffer help class, with automatic memory deallocation and smart reallocation
 class CharBuffer
 {
 public:
@@ -126,14 +126,14 @@ public:
         }
     }
 
-    //! @brief Reallocate the buffer memmory (but only if new size is larger then before)
+    //! @brief Reallocate the buffer memory (but only if new size is larger then before)
     //! @param[in] size The desired buffer size (the number of bytes to allocate)
     //! @returns true if reallocation was a success or if no reallocation was necessary, false if reallocation failed
     inline bool resize(size_t size)
     {
         if (size > mSize)
         {
-            // Size is larger then before (realloc memmory)
+            // Size is larger then before (reallocate memory)
             mpCharArray = static_cast<char*>(realloc(mpCharArray, size));
             if (mpCharArray)
             {
@@ -146,7 +146,7 @@ public:
                 return false;
             }
         }
-        // Lets keep the previously allocated memmory as buffer (to avoid time consuming realloc)
+        // Lets keep the previously allocated memory as buffer (to avoid time consuming reallocation)
         return true;
     }
 
@@ -176,10 +176,10 @@ bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rDa
 template <typename T>
 bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData)
 {
-    // Assume all rows have same num cols
+    // Assume all rows have same number of columns
     if (col < numCols(startRow))
     {
-        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        // Reserve data (will only increase reserved memory if needed, not shrink)
         rData.reserve(numRows);
 
         // Temporary buffer object
@@ -191,7 +191,7 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
             // Begin and end positions
             size_t b = mSeparatorMatrix[r][col] + size_t(col > 0);
             size_t e = mSeparatorMatrix[r][col+1];
-            // Move file ptr
+            // Move file pointer
             std::fseek(mpFile, b, SEEK_SET);
 
             // Extract data
@@ -228,14 +228,14 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 {
     if (row < mSeparatorMatrix.size())
     {
-        // Reserve data (will only increase reserved memmory if needed, not shrink)
+        // Reserve data (will only increase reserved memory if needed, not shrink)
         rData.reserve(numCols);
 
         // Begin position
         size_t b = mSeparatorMatrix[row][startCol] + 1*(startCol > 0);
-        // Move file ptr
+        // Move file pointer
         fseek(mpFile, b, SEEK_SET);
-        // Character buffer for extravtion and parsing
+        // Character buffer for extraction and parsing
         CharBuffer cb;
         // Loop through each column on row
         for (size_t c=startCol+1; c<=startCol+numCols; ++c)
@@ -259,7 +259,7 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 
             // Update b for next field, skipping the character itself
             b = mSeparatorMatrix[row][c]+1;
-            // Move the file ptr, 1 char (gobble the separator)
+            // Move the file pointer, 1 char (gobble the separator)
             fgetc(mpFile);
         }
         return true;
@@ -272,7 +272,7 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 //! @tparam T The type do convert asci text to
 //! @param[in] row The row index (0-based)
 //! @param[in] col The column index (0-based)
-//! @returns The value at the requested position as given templat type arguemnt default constructed value if position does not exist
+//! @returns The value at the requested position as given template type argument default constructed value if position does not exist
 template <typename T>
 T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK)
 {
@@ -319,7 +319,7 @@ bool IndexingCSVParser::getRowAs(std::vector<T> &rData)
             {
                 bool parseOK;
                 rData.push_back(converter<T>(cb.buff(), parseOK));
-                // Indicate we failed to parse, but we still need to gobble the entire line incase we reach EOF
+                // Indicate we failed to parse, but we still need to gobble the entire line in case we reach EOF
                 if (!parseOK)
                 {
                     isSuccess = false;
@@ -327,7 +327,7 @@ bool IndexingCSVParser::getRowAs(std::vector<T> &rData)
             }
             else
             {
-                // Indicate we failed to parse, but we still need to gobble the entire line incase we reach EOF
+                // Indicate we failed to parse, but we still need to gobble the entire line in case we reach EOF
                 isSuccess = false;
             }
 
@@ -338,10 +338,10 @@ bool IndexingCSVParser::getRowAs(std::vector<T> &rData)
                 b = ftell(mpFile); //!< @todo maybe can use +1 since binary mode (calc bytes) might be faster
             }while(c == '\r');
 
-            // Break loop when we have reachen EOL or EOF
+            // Break loop when we have reached EOL or EOF
             if (c == '\n' || c == EOF)
             {
-                // If we got a LF then peek to see if EOF reached, if so gooble char to set EOF flag on file
+                // If we got a LF then peek to see if EOF reached, if so gobble char to set EOF flag on file
                 if (peek(mpFile) == EOF)
                 {
                     fgetc(mpFile);
