@@ -26,8 +26,7 @@ Method 2 is suitable if you have a large data sets and only want to extract (and
 - Error handling is currently absent, it is assumed that no read errors on the file occur.
 - The data file must be "well formed" the same separator charter must be used in the entire file.
 - The parser does not yet support "enclosure". A way to enclose text containing the separator character without it being interpreted as a separator.
-- No automated testing (and more test examples are needed).
-- Supports only CRLF or LF EOL characters, (but this is enough for my own needs).
+- Supports only CRLF or LF EOL characters.
 - Only supports ASCII input (no Unicode support).
 
 ## License
@@ -37,17 +36,20 @@ This code is released under the Simplified BSD license. See the LICENSE file for
 Type conversion is done using specialized template converter functions, see IndexingCSVParserImpl.hpp for details.
 Support for new types need a new template specialization for that type. 
 Currently the following type conversions are implemented:
+- float
 - double
+- int
+- unsigned int
 - long int
 - unsigned long int
 - std::string
 
 ## Configuration
-If you define INDCSVP_REPLACEDECIMALCOMMA before including the IndexingCSVParser.h header, the library will automatically replace decimal mark ',' with '.' during conversion to double values. This makes it possible to parse numeric CSV files exported from some programs under some locale settings.
+If you define INDCSVP_REPLACEDECIMALCOMMA before including the IndexingCSVParser.h header, the library will automatically replace decimal mark ',' with '.' during conversion to double values. This makes it possible to parse numeric CSV files exported from some programs under some specific locale settings, even if your application uses for example the C locale.
 
 ## Build
-The library is written in "plain C++", the project file (.pro) is a QtCreator project file but you do not need Qt to build the library. Just include the header and cpp files in your own project and compile it.
+The library is written in plain C++ 98 (tests require C++ 11) and uses CMake for the build system to produce a static library. You can also choose to include the source code files directly into your project. Just copy the include and src directories.
 
 ## Usage Example 
-See the main.cpp file for usage example, and read the Doxygen comments in the code (cpp files).
+See the example/main.cpp file for usage example, and read the Doxygen comments in the code (cpp files).
 
