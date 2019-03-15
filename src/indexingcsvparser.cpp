@@ -17,6 +17,8 @@
 using namespace std;
 using namespace indcsvp;
 
+namespace {
+
 //! @brief Help function that gobbles all characters on a line
 //! @param[in] pFile The file object to gobble from
 void discardLine(FILE *pFile)
@@ -27,12 +29,33 @@ void discardLine(FILE *pFile)
     }
 }
 
+//! @brief Remove leading and trailing white spaces from a string
+//! @param[in] rString The string to be modified
+void trimLeadingAndTrailingSpaces(string& rString) {
+    while (!rString.empty() && (rString[0] == ' ' || rString[0] == '\t'))
+    {
+        rString.erase(0,1);
+    }
+    while (!rString.empty() && (rString[rString.size()-1] == ' ' || rString[rString.size()-1] == '\t'))
+    {
+        rString.erase(rString.size()-1);
+    }
+}
+
+} // End anon namespace
+
+
 IndexingCSVParser::IndexingCSVParser()
 {
     mpFile = 0;
     mSeparatorChar = ',';
     mNumSkipLines = 0;
     mCommentChar = '\0';
+}
+
+void IndexingCSVParser::setHeaderInfo(Direction direction, size_t rowOrColumn)
+{
+    mHeaderSetting.setHeaderInfo(direction, rowOrColumn);
 }
 
 //! @brief Set the separator character
@@ -79,6 +102,11 @@ char IndexingCSVParser::autoSetSeparatorChar(const std::vector<char> &rAlternati
         }
     }
     return mSeparatorChar;
+}
+
+HeaderSetting IndexingCSVParser::getHeaderSetting() const
+{
+    return mHeaderSetting;
 }
 
 //! @brief Returns the separator character used
@@ -135,7 +163,7 @@ void IndexingCSVParser::indexFile()
     readUntilData();
     mSeparatorMatrix.clear();
 
-    mSeparatorMatrix.reserve(100); //!< @todo guess
+    mSeparatorMatrix.reserve(100); //!< @todo guess num rows
     size_t lastLineNumSeparators = 20;
 
     // We register the position in the file before we read the char, as that will advance the file pointer
@@ -255,6 +283,11 @@ void IndexingCSVParser::minMaxNumCols(size_t &rMin, size_t &rMax)
     // Do not count end of line separator
     rMin -= 1;
     rMax -= 1;
+}
+
+const std::vector<string> &IndexingCSVParser::header() const
+{
+    return mHeader;
 }
 
 //! @brief Extract the data of a given indexed column (as std::string)
@@ -432,21 +465,82 @@ bool IndexingCSVParser::hasMoreDataRows()
     return feof(mpFile) == 0;
 }
 
+bool IndexingCSVParser::getHeaderRow(std::vector<string> &rData)
+{
+    bool parseOK = getRow(rData);
+    if (parseOK) {
+        // Strip comment char from first  header item if it is the first char
+        if (mCommentChar != '\0' && !rData.empty() && !rData.front().empty()) {
+            if (*rData.front().begin() == mCommentChar) {
+                rData.front().erase(0,1);
+            }
+        }
+        // Strip leading and trailing spaces in names
+        for (size_t i=0; i<rData.size(); ++i) {
+            trimLeadingAndTrailingSpaces(rData[i]);
+        }
+    }
+    return parseOK;
+}
+
 //! @brief Gobble the initial number of lines to skip and lines beginning with the comment character
 void IndexingCSVParser::readUntilData()
 {
-    // First remote lines to skip
-    for(size_t i=0; i<mNumSkipLines; ++i)
-    {
-        discardLine(mpFile);
-    }
+    // First remove configured lines to skip
+    skipNumLines(mNumSkipLines);
 
-    // Now remove lines starting with comment sign (if one is set)
-    if (mCommentChar != '\0')
-    {
-        while (peek(mpFile) == mCommentChar)
-        {
-            discardLine(mpFile);
+    const bool haveHeaderRow = (mHeaderSetting.isValid() && (mHeaderSetting.direction() == Row));
+    size_t curentRowIndex = mNumSkipLines;
+
+    // Now auto remove initial lines beginning with the comment char, but extract the header if it is among them
+    if (mCommentChar != '\0') {
+        size_t headerLine =  haveHeaderRow ? mHeaderSetting.rowOrColumn() : std::numeric_limits<size_t>::max();
+        while (peek(mpFile) == mCommentChar) {
+            if ( curentRowIndex == headerLine ) {
+                getHeaderRow(mHeader);
+            }
+            else {
+                discardLine(mpFile);
+            }
+            ++curentRowIndex;
         }
     }
+
+    // Skip everything until the header line unless we have already found it
+    if ( haveHeaderRow && (curentRowIndex <= mHeaderSetting.rowOrColumn()) ) {
+        skipNumLines(mHeaderSetting.rowOrColumn()-curentRowIndex);
+        getHeaderRow(mHeader);
+        // There should be no non-data rows after the header in this case
+    }
+}
+
+void IndexingCSVParser::skipNumLines(size_t num)
+{
+    for(size_t i=0; i<num; ++i) {
+        discardLine(mpFile);
+    }
+}
+
+HeaderSetting::HeaderSetting() {
+    // Abusing size_t::max to indicate invalid, it is unlikely that a header will be placed at that line
+    mHeaderIndex = std::numeric_limits<size_t>::max();
+}
+
+void HeaderSetting::setHeaderInfo(Direction direction, size_t rowOrCol) {
+    mDirection = direction;
+    mHeaderIndex = rowOrCol;
+}
+
+bool HeaderSetting::isValid() const {
+    return mHeaderIndex != std::numeric_limits<size_t>::max();
+}
+
+Direction HeaderSetting::direction() const
+{
+    return mDirection;
+}
+
+size_t HeaderSetting::rowOrColumn() const
+{
+    return mHeaderIndex;
 }

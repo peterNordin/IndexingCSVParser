@@ -31,12 +31,7 @@ add_executable(indexingcsvparsertest ${srcfiles})
 target_link_libraries(indexingcsvparsertest indexingcsvparser Catch)
 add_dependencies(indexingcsvparsertest Catch-get)
 
-
-list(APPEND testdatafiles testdata_int_comma_h3r11c3_lf.csv)
-list(APPEND testdatafiles testdata_int_semicolon_h3r11c3_lf.csv)
-list(APPEND testdatafiles testdata_int_comma-space_h3r11c3_lf.csv)
-list(APPEND testdatafiles testdata_real_comma_h3r9c2_lf.csv)
-list(APPEND testdatafiles testdata_real_semicolon_decimalcomma_h3r9c2_lf.csv)
+file(GLOB testdatafiles RELATIVE ${CMAKE_CURRENT_LIST_DIR} *.csv)
 foreach(tdf ${testdatafiles})
     configure_file(${tdf} ${tdf} COPYONLY)
     string(REPLACE "_lf" "_crlf" tdfcrlf ${tdf})

@@ -24,7 +24,6 @@ public:
     }
 };
 
-enum class Direction {Row, Column};
 enum class Parser {ShouldSucceed, ShouldFail};
 
 template<typename T>
@@ -236,20 +235,24 @@ struct TestFile
 {
     char separator;
     char decimalSeparator;
+    size_t columnHeader;
     string file;
 };
 
 
-static vector<TestFile> intFiles { {',', '\0', "testdata_int_comma_h3r11c3_lf.csv"},
-                                   {',', '\0', "testdata_int_comma_h3r11c3_crlf.csv"},
-                                   {';', '\0', "testdata_int_semicolon_h3r11c3_lf.csv"},
-                                   {';', '\0', "testdata_int_semicolon_h3r11c3_crlf.csv"},
-                                   /*{',', '\0', "testdata_int_comma-space_h3r11c3_lf.csv"}*/};
+static vector<TestFile> intFiles { {',', '\0', 2, "testdata_int_comma_h3r11c3_lf.csv"},
+                                   {',', '\0', 2, "testdata_int_comma_h3r11c3_crlf.csv"},
+                                   {';', '\0', 2, "testdata_int_semicolon_h3r11c3_lf.csv"},
+                                   {';', '\0', 2, "testdata_int_semicolon_h3r11c3_crlf.csv"},
+                                   /*{',', '\0', 2, "testdata_int_comma-space_h3r11c3_lf.csv"}*/};
 
-static vector<TestFile> realFiles {{',', '.',"testdata_real_comma_h3r9c2_lf.csv"},
-                                   {',', '.',"testdata_real_comma_h3r9c2_crlf.csv"},
-                                   {';', ',',"testdata_real_semicolon_decimalcomma_h3r9c2_lf.csv"},
-                                   {';', ',',"testdata_real_semicolon_decimalcomma_h3r9c2_crlf.csv"}};
+static vector<TestFile> realFiles {{',', '.', 2, "testdata_real_comma_h3r9c2_lf.csv"},
+                                   {',', '.', 2, "testdata_real_comma_h3r9c2_crlf.csv"},
+                                   {';', ',', 2, "testdata_real_semicolon_decimalcomma_h3r9c2_lf.csv"},
+                                   {';', ',', 2, "testdata_real_semicolon_decimalcomma_h3r9c2_crlf.csv"}};
+
+static vector<TestFile> headerFiles {{',', '.', 2, "testdata_header_ascomment_h4.csv"},
+                                     {',', '.', 2, "testdata_header_belowcomment_h3.csv"}};
 
 
 class TestFileGenerator : public Catch::Generators::IGenerator<TestFile>
@@ -310,11 +313,27 @@ TEST_CASE("Set parse parameters") {
         csvp.setNumLinesToSkip(3);
         REQUIRE(csvp.getNumLinesToSkip() == 3);
     }
+
+    SECTION("Header setting") {
+        auto header = csvp.getHeaderSetting();
+        REQUIRE_FALSE(header.isValid());
+        csvp.setHeaderInfo(Row, 5);
+        header = csvp.getHeaderSetting();
+        CHECK(header.isValid());
+        CHECK(header.direction() == Row);
+        CHECK(header.rowOrColumn() == 5);
+        csvp.setHeaderInfo(Column, 6);
+        header = csvp.getHeaderSetting();
+        CHECK(header.isValid());
+        CHECK(header.direction() == Column);
+        CHECK(header.rowOrColumn() == 6);
+    }
 }
 
 TEST_CASE("File operations") {
     IndexingCSVParserSpy csvp;
     csvp.openFile(intFiles.front().file.c_str());
+    INFO(intFiles.front().file.c_str());
     REQUIRE(csvp.fileIsOpen());
     REQUIRE(csvp.fileIsAtBeginning());
     csvp.indexFile();
@@ -332,6 +351,8 @@ TEST_CASE("Parse integer data") {
     csvp.setSeparatorChar(testfile.separator);
     csvp.openFile(testfile.file.c_str());
     csvp.setCommentChar('#');
+    csvp.setHeaderInfo(Row, testfile.columnHeader);
+    INFO(testfile.file.c_str());
     REQUIRE(csvp.fileIsOpen());
 
     csvp.indexFile();
@@ -344,6 +365,12 @@ TEST_CASE("Parse integer data") {
         csvp.minMaxNumCols(mincols, maxcols);
         CHECK(mincols == csvp.numCols());
         CHECK(maxcols == csvp.numCols());
+    }
+
+    SECTION("Check header") {
+        auto header = csvp.header();
+        decltype(header) expected {"v", "v squared", "v multiplied with 2"};
+        CHECK(expected == header);
     }
 
     SECTION("Extract individual values") {
@@ -395,6 +422,8 @@ TEST_CASE("Parse real data") {
     string ds {testfile.decimalSeparator};
     csvp.openFile(testfile.file.c_str());
     csvp.setCommentChar('#');
+    csvp.setHeaderInfo(Row, testfile.columnHeader);
+    INFO(testfile.file.c_str());
     REQUIRE(csvp.fileIsOpen());
 
     csvp.indexFile();
@@ -407,6 +436,12 @@ TEST_CASE("Parse real data") {
         csvp.minMaxNumCols(mincols, maxcols);
         CHECK(mincols == csvp.numCols());
         CHECK(maxcols == csvp.numCols());
+    }
+
+    SECTION("Check header") {
+        auto header = csvp.header();
+        decltype(header) expected {"x", "x+0"+ds+"5"};
+        CHECK(expected == header);
     }
 
     SECTION("Extract individual values") {
@@ -458,6 +493,7 @@ TEST_CASE("Check out of bounds")
     csvp.setSeparatorChar(testfile.separator);
     csvp.openFile(testfile.file.c_str());
     csvp.setCommentChar('#');
+    INFO(testfile.file.c_str());
     REQUIRE(csvp.fileIsOpen());
 
     csvp.indexFile();
@@ -471,4 +507,23 @@ TEST_CASE("Check out of bounds")
     CHECK_THAT(expected, AtColumnParseFail(&csvp, csvp.numCols()));
 
     csvp.closeFile();
+}
+
+TEST_CASE("Check header")
+{
+    auto testfile = GENERATE(GeneratorWrapper<TestFile>(std::unique_ptr<IGenerator<TestFile>>(new TestFileGenerator(headerFiles))));
+
+    IndexingCSVParserSpy csvp;
+    csvp.setSeparatorChar(testfile.separator);
+    csvp.openFile(testfile.file.c_str());
+    csvp.setCommentChar('#');
+    csvp.setHeaderInfo(Row, testfile.columnHeader);
+    INFO(testfile.file.c_str());
+    REQUIRE(csvp.fileIsOpen());
+
+    csvp.indexFile();
+
+    auto header = csvp.header();
+    decltype(header) expected {"v", "v squared", "v multiplied with 2"};
+    CHECK(expected == header);
 }
