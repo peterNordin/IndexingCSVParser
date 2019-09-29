@@ -418,52 +418,7 @@ string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool
 //! @param[in] trim Whether to trim leading and trailing spaces from data
 bool IndexingCSVParser::getRow(std::vector<string> &rData, TrimSpaceOption trim)
 {
-    bool isSuccess = true;
-    CharBuffer cb;
-
-    size_t b = ftell(mpFile);
-    while (true)
-    {
-        size_t e = ftell(mpFile);
-        int c = fgetc(mpFile);
-
-        if (c == mSeparatorChar || c == '\n' || c == '\r' || c == EOF)
-        {
-            // Rewind file pointer to start of field
-            fseek(mpFile, b, SEEK_SET);
-            cb.setContentSize(e-b);
-            char* rc = fgets(cb.buff(), e-b+1, mpFile);
-            if (rc)
-            {
-                rData.push_back(cb.str(trim));
-            }
-            else
-            {
-                // Indicate we failed to parse, but we still need to gobble the entire line incase we reach EOF
-                isSuccess = false;
-            }
-
-            // Eat the separator char, in case of CRLF EOL, then gobble both CR and expected LF
-            do
-            {
-                c = fgetc(mpFile);
-                b = ftell(mpFile); //!< @todo maybe can use +1 since binary mode (calc bytes) might be faster
-            }while(c == '\r');
-
-            // Break loop when we have reached EOL or EOF
-            if (c == '\n' || c == EOF)
-            {
-                // If we got a LF then peek to see if EOF reached, if so gooble char to set EOF flag on file
-                if (peek(mpFile) == EOF)
-                {
-                    fgetc(mpFile);
-                }
-                break;
-            }
-        }
-    }
-    return isSuccess;
-    //! @todo try to index line first before extracting data, might be faster since we can reserve (maybe)
+    return getRowAs(rData, trim);
 }
 
 //! @brief Check if more data rows are available for extraction (for non-indexed files)
