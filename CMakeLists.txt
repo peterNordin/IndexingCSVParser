@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_DEBUG_POSTFIX _d)
 
 
-file(GLOB_RECURSE srcfiles src/*.cpp)
+file(GLOB_RECURSE srcfiles src/*.cpp include/*.h include/*.hpp)
 
 add_library(indexingcsvparser STATIC ${srcfiles})
 target_include_directories(indexingcsvparser PUBLIC

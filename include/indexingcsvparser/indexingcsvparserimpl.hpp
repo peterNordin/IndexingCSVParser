@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 namespace indcsvp
 {
@@ -30,77 +31,186 @@ inline void replaceDecimalComma(char* pBuff)
     }
 }
 
-//! @brief The default converter template function
-//! @details This function will always fail, template specialization for each type are required
-//! @tparam T The type that we want to interpret the contests of pBuffer as.
-//! @param[in] pBuff The character buffer to convert
-//! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
-//! @returns Type default constructed value;
-template <typename T>
-T converter(char* pBuff, bool &rIsOK)
+//! @brief Character buffer help class, with automatic memory deallocation and smart reallocation
+class CharBuffer
 {
-    rIsOK = false;
-    return T();
-}
+public:
+    CharBuffer() : mpBuffer(0), mAllocatedSize(0), mContentSize(0) {}
+    CharBuffer(size_t size) : mpBuffer(0), mAllocatedSize(0), mContentSize(0) {setContentSize(size);}
+    ~CharBuffer()
+    {
+        if (mpBuffer)
+        {
+            delete[] mpBuffer;
+        }
+    }
+
+    //! @brief Set the buffer size for intended content, excluding null-terminator space
+    inline bool setContentSize(size_t size)
+    {
+        bool alloc_ok = resizeBuffer(size+1);
+        if (alloc_ok) {
+            mContentSize = size;
+        }
+        return alloc_ok;
+    }
+
+    //! @brief Returns the current buffer content size (excluding null terminator)
+    inline size_t contentSize()
+    {
+        return mContentSize;
+    }
+
+    //! @brief Returns the current allocated buffer size
+    inline size_t bufferSize()
+    {
+        return mAllocatedSize;
+    }
+
+    //! @brief Returns the actual character buffer
+    inline char* buff()
+    {
+        return mpBuffer;
+    }
+
+    //! @brief Returns a string constructed from the character buffer
+    std::string str(TrimSpaceOption trim=NoTrim) const
+    {
+        if (trim==TrimLeadingTrailingSpace && mContentSize>1) {
+            return trimmed_str();
+        }
+        else {
+            return std::string(mpBuffer);
+        }
+    }
+
+    //! @brief The default converter template function
+    //! @details This function will always fail, template specialization for each type are required
+    //! @tparam T The type that we want to interpret the contests of pBuffer as.
+    //! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
+    //! @param[in] trim Whether to trim leading and trailing spaces from data
+    //! @returns Type default constructed value;
+    template <typename T>
+    T getAs(bool &rIsOK, TrimSpaceOption trim=NoTrim)
+    {
+        static_cast<void>(trim);
+        rIsOK = false;
+        return T();
+    }
+
+protected:
+    std::string trimmed_str() const
+    {
+        char* start = mpBuffer;
+        size_t count = mContentSize;
+        for (size_t i=0; i<mContentSize; ++i) {
+            if (isspace(mpBuffer[i])) {
+                start = &mpBuffer[i+1];
+                --count;
+            }
+            else {
+                break;
+            }
+        }
+        for (size_t ri=mContentSize-1; ri>0; --ri) {
+            if (isspace(mpBuffer[ri])) {
+                --count;
+            }
+            else {
+                break;
+            }
+        }
+        return std::string(start, count);
+    }
+
+    //! @brief Reallocate the buffer memory (but only if new size is larger then before)
+    //! @param[in] size The desired buffer size (the number of bytes to allocate)
+    //! @returns true if reallocation was a success or if no reallocation was necessary, false if reallocation failed
+    bool resizeBuffer(size_t size)
+    {
+        if (size > mAllocatedSize)
+        {
+            // Size is larger then before (reallocate memory)
+            mpBuffer = static_cast<char*>(realloc(mpBuffer, size));
+            if (mpBuffer)
+            {
+                mAllocatedSize = size;
+                return true;
+            }
+            else
+            {
+                mAllocatedSize = 0;
+                return false;
+            }
+        }
+        // Lets keep the previously allocated memory as buffer (to avoid time consuming reallocation)
+        return true;
+    }
+
+    char *mpBuffer;
+    size_t mAllocatedSize;
+    size_t mContentSize;
+};
 
 //! @brief The std::string converter specialized template function
-//! @param[in] pBuff The character buffer to convert
 //! @param[out] rIsOK Reference to bool flag telling you if parsing completed successfully
+//! @param[in] trim Whether to trim leading and trailing spaces from data
 //! @returns The contents of pBuff as a std::string
 template<> inline
-std::string converter<std::string>(char* pBuff, bool &rIsOK)
+std::string CharBuffer::getAs<std::string>(bool &rIsOK, TrimSpaceOption trim)
 {
     rIsOK = true;
-    return std::string(pBuff);
+    return str(trim);
 }
 
 template<> inline
-double converter<double>(char* pBuff, bool &rIsOK)
+double CharBuffer::getAs<double>(bool &rIsOK, TrimSpaceOption /*trim*/)
 {
 #ifdef INDCSVP_REPLACEDECIMALCOMMA
-    replaceDecimalComma(pBuff);
+    replaceDecimalComma(mpBuffer);
 #endif
     char *pEnd;
-    double d = std::strtod(pBuff, &pEnd);
-    rIsOK = (*pEnd == '\0');
+    double d = std::strtod(mpBuffer, &pEnd);
+    rIsOK = (*pEnd == '\0') || isspace(*pEnd);
     return d;
 }
 
 template<> inline
-float converter<float>(char* pBuff, bool &rIsOK)
+float CharBuffer::getAs<float>(bool &rIsOK, TrimSpaceOption trim)
 {
-    return static_cast<float>(converter<double>(pBuff, rIsOK));
+    return static_cast<float>(getAs<double>(rIsOK, trim));
 }
 
 template<> inline
-unsigned long int converter<unsigned long int>(char* pBuff, bool &rIsOK)
+unsigned long int CharBuffer::getAs<unsigned long int>(bool &rIsOK, TrimSpaceOption /*trim*/)
 {
     char *pEnd;
-    unsigned long int ul = strtoul(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
-    rIsOK = (*pEnd == '\0');
+    unsigned long int ul = strtoul(mpBuffer, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
+    rIsOK = (*pEnd == '\0') || isspace(*pEnd);
     return ul;
 }
 
 template<> inline
-unsigned int converter<unsigned int>(char* pBuff, bool &rIsOK)
+unsigned int CharBuffer::getAs<unsigned int>(bool &rIsOK, TrimSpaceOption trim)
 {
-    return static_cast<unsigned int>(converter<unsigned long int>(pBuff, rIsOK));
+    return static_cast<unsigned int>(getAs<unsigned long int>(rIsOK, trim));
 }
 
 template<> inline
-long int converter<long int>(char* pBuff, bool &rIsOK)
+long int CharBuffer::getAs<long int>(bool &rIsOK, TrimSpaceOption /*trim*/)
 {
     char *pEnd;
-    long int i = strtol(pBuff, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
-    rIsOK = (*pEnd == '\0');
+    long int i = strtol(mpBuffer, &pEnd, 10); //!< @todo maybe support other bases then 10, see strtol documentation
+    rIsOK = (*pEnd == '\0') || isspace(*pEnd);
     return i;
 }
 
 template<> inline
-int converter<int>(char* pBuff, bool &rIsOK)
+int CharBuffer::getAs<int>(bool &rIsOK, TrimSpaceOption trim)
 {
-    return static_cast<int>(converter<long int>(pBuff, rIsOK));
+    return static_cast<int>(getAs<long int>(rIsOK, trim));
 }
+
 
 //! @brief Peek help function to peek at the next character in the file
 //! @param[in] pStream The stream too peek in
@@ -112,69 +222,14 @@ inline int peek(FILE *pStream)
     return c;
 }
 
-//! @brief Character buffer help class, with automatic memory deallocation and smart reallocation
-class CharBuffer
-{
-public:
-    CharBuffer() : mpCharArray(0), mSize(0) {}
-    CharBuffer(size_t size) : mpCharArray(0), mSize(0) {resize(size);}
-    ~CharBuffer()
-    {
-        if (mpCharArray)
-        {
-            delete[] mpCharArray;
-        }
-    }
-
-    //! @brief Reallocate the buffer memory (but only if new size is larger then before)
-    //! @param[in] size The desired buffer size (the number of bytes to allocate)
-    //! @returns true if reallocation was a success or if no reallocation was necessary, false if reallocation failed
-    inline bool resize(size_t size)
-    {
-        if (size > mSize)
-        {
-            // Size is larger then before (reallocate memory)
-            mpCharArray = static_cast<char*>(realloc(mpCharArray, size));
-            if (mpCharArray)
-            {
-                mSize = size;
-                return true;
-            }
-            else
-            {
-                mSize = 0;
-                return false;
-            }
-        }
-        // Lets keep the previously allocated memory as buffer (to avoid time consuming reallocation)
-        return true;
-    }
-
-    //! @brief Returns the actual character buffer
-    inline char* buff()
-    {
-        return mpCharArray;
-    }
-
-    //! @brief Returns the current buffer size
-    inline size_t size()
-    {
-        return mSize;
-    }
-
-protected:
-    char *mpCharArray;
-    size_t mSize;
-};
-
 template <typename T>
-bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rData)
+bool IndexingCSVParser::getIndexedColumnAs(const size_t col, std::vector<T> &rData, TrimSpaceOption trim)
 {
-    return IndexingCSVParser::getIndexedColumnRowRangeAs<T>(col, 0, numRows(), rData);
+    return IndexingCSVParser::getIndexedColumnRowRangeAs<T>(col, 0, numRows(), rData, trim);
 }
 
 template <typename T>
-bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData)
+bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData, TrimSpaceOption trim)
 {
     // Assume all rows have same number of columns
     if (col < numCols(startRow))
@@ -195,13 +250,13 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
             std::fseek(mpFile, b, SEEK_SET);
 
             // Extract data
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             // Push back data
             if (rc)
             {
                 bool parseOK;
-                rData.push_back(converter<T>(cb.buff(), parseOK));
+                rData.push_back(cb.getAs<T>(parseOK, trim));
                 if (!parseOK)
                 {
                     return false;
@@ -218,13 +273,13 @@ bool IndexingCSVParser::getIndexedColumnRowRangeAs(const size_t col, const size_
 }
 
 template <typename T>
-bool IndexingCSVParser::getIndexedRowAs(const size_t row, std::vector<T> &rData)
+bool IndexingCSVParser::getIndexedRowAs(const size_t row, std::vector<T> &rData, TrimSpaceOption trim)
 {
-    return IndexingCSVParser::getIndexedRowColumnRangeAs<T>(row,0,numCols(row),rData);
+    return IndexingCSVParser::getIndexedRowColumnRangeAs<T>(row,0,numCols(row),rData, trim);
 }
 
 template <typename T>
-bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData)
+bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData, TrimSpaceOption trim)
 {
     if (row < mSeparatorMatrix.size())
     {
@@ -241,12 +296,12 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
         for (size_t c=startCol+1; c<=startCol+numCols; ++c)
         {
             const size_t e = mSeparatorMatrix[row][c];
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
                 bool parseOK;
-                rData.push_back(converter<T>(cb.buff(), parseOK));
+                rData.push_back(cb.getAs<T>(parseOK, trim));
                 if (!parseOK)
                 {
                     return false;
@@ -272,9 +327,10 @@ bool IndexingCSVParser::getIndexedRowColumnRangeAs(const size_t row, const size_
 //! @tparam T The type do convert asci text to
 //! @param[in] row The row index (0-based)
 //! @param[in] col The column index (0-based)
+//! @param[in] trim Whether to trim leading and trailing spaces from data
 //! @returns The value at the requested position as given template type argument default constructed value if position does not exist
 template <typename T>
-T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK)
+T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK, TrimSpaceOption trim)
 {
     if (row < mSeparatorMatrix.size())
     {
@@ -285,11 +341,11 @@ T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &r
             size_t e = mSeparatorMatrix[row][col+1];
             fseek(mpFile, b, SEEK_SET);
 
-            CharBuffer cb(e-b+1);
+            CharBuffer cb(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
-                return converter<T>(cb.buff(), rParseOK);
+                return cb.getAs<T>(rParseOK, trim);
             }
         }
     }
@@ -298,7 +354,7 @@ T IndexingCSVParser::getIndexedPosAs(const size_t row, const size_t col, bool &r
 }
 
 template <typename T>
-bool IndexingCSVParser::getRowAs(std::vector<T> &rData)
+bool IndexingCSVParser::getRowAs(std::vector<T> &rData, TrimSpaceOption trim)
 {
     bool isSuccess = true;
     CharBuffer cb;
@@ -313,12 +369,12 @@ bool IndexingCSVParser::getRowAs(std::vector<T> &rData)
         {
             // Rewind file pointer to start of field
             fseek(mpFile, b, SEEK_SET);
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
                 bool parseOK;
-                rData.push_back(converter<T>(cb.buff(), parseOK));
+                rData.push_back(cb.getAs<T>(parseOK, trim));
                 // Indicate we failed to parse, but we still need to gobble the entire line in case we reach EOF
                 if (!parseOK)
                 {

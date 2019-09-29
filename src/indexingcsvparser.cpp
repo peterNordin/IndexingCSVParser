@@ -29,21 +29,25 @@ void discardLine(FILE *pFile)
     }
 }
 
-//! @brief Remove leading and trailing white spaces from a string
-//! @param[in] rString The string to be modified
-void trimLeadingAndTrailingSpaces(string& rString) {
-    while (!rString.empty() && (rString[0] == ' ' || rString[0] == '\t'))
-    {
-        rString.erase(0,1);
+
+//! @brief Remove leading white spaces from a string
+//! @param[in,out] rString The string to be modified
+void trimLeadingSpaces(std::string& rString) {
+    size_t count=0;
+    for (size_t i=0; i<rString.size(); ++i) {
+        if (isspace(rString[i])) {
+            ++count;
+        }
+        else {
+            break;
+        }
     }
-    while (!rString.empty() && (rString[rString.size()-1] == ' ' || rString[rString.size()-1] == '\t'))
-    {
-        rString.erase(rString.size()-1);
+    if (count > 0) {
+        rString.erase(0,count);
     }
 }
 
 } // End anon namespace
-
 
 IndexingCSVParser::IndexingCSVParser()
 {
@@ -229,7 +233,7 @@ void IndexingCSVParser::indexFile()
             c = fgetc(mpFile);
         }
 
-        // Remember the length of the line (to reserve relevant amount of memmory next time)
+        // Remember the length of the line (to reserve relevant amount of memory next time)
         lastLineNumSeparators =  rLine.size();
     }
 }
@@ -293,8 +297,9 @@ const std::vector<string> &IndexingCSVParser::header() const
 //! @brief Extract the data of a given indexed column (as std::string)
 //! @param[in] col The column index (0-based)
 //! @param[in,out] rData The data vector to append column data to
+//! @param[in] trim Whether to trim leading and trailing spaces from data
 //! @returns true if no errors occurred, else false
-bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &rData)
+bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &rData, TrimSpaceOption trim)
 {
     if (col < numCols(0))
     {
@@ -314,12 +319,12 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
             fseek(mpFile, b, SEEK_SET);
 
             // Extract data
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             // Push back data
             if (rc)
             {
-                rData.push_back(cb.buff());
+                rData.push_back(cb.str(trim));
             }
             else
             {
@@ -334,8 +339,9 @@ bool IndexingCSVParser::getIndexedColumn(const size_t col, std::vector<string> &
 //! @brief Extract the data of a given indexed row (as std::string)
 //! @param[in] row The row index (0-based)
 //! @param[in,out] rData The data vector to append row data to
+//! @param[in] trim Whether to trim leading and trailing spaces from data
 //! @returns true if no errors occurred, else false
-bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rData)
+bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rData, TrimSpaceOption trim)
 {
     if (row < mSeparatorMatrix.size())
     {
@@ -354,11 +360,11 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
         for (size_t c=1; c<=nc; ++c)
         {
             const size_t e = mSeparatorMatrix[row][c];
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
-                rData.push_back(cb.buff());
+                rData.push_back(cb.str(trim));
             }
             else
             {
@@ -378,8 +384,9 @@ bool IndexingCSVParser::getIndexedRow(const size_t row, std::vector<string> &rDa
 //! @brief Extract the data of a given indexed position row and column (as std::string)
 //! @param[in] row The row index (0-based)
 //! @param[in] col The column index (0-based)
+//! @param[in] trim Whether to trim leading and trailing spaces from data
 //! @returns The value at the requested position as std::string or empty if position does not exist
-string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool &rParseOK)
+string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool &rParseOK, TrimSpaceOption trim)
 {
     if (row < mSeparatorMatrix.size())
     {
@@ -390,12 +397,12 @@ string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool
             size_t e = mSeparatorMatrix[row][col+1];
             fseek(mpFile, b, SEEK_SET);
 
-            CharBuffer cb(e-b+1);
+            CharBuffer cb(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
                 rParseOK = true;
-                return string(cb.buff());
+                return cb.str(trim);
             }
             else
             {
@@ -408,7 +415,8 @@ string IndexingCSVParser::getIndexedPos(const size_t row, const size_t col, bool
 
 //! @brief Extract a data row from a non-indexed file (as std::string)
 //! @param[in,out] rData The data vector to append extracted data to
-bool IndexingCSVParser::getRow(std::vector<string> &rData)
+//! @param[in] trim Whether to trim leading and trailing spaces from data
+bool IndexingCSVParser::getRow(std::vector<string> &rData, TrimSpaceOption trim)
 {
     bool isSuccess = true;
     CharBuffer cb;
@@ -423,11 +431,11 @@ bool IndexingCSVParser::getRow(std::vector<string> &rData)
         {
             // Rewind file pointer to start of field
             fseek(mpFile, b, SEEK_SET);
-            cb.resize(e-b+1);
+            cb.setContentSize(e-b);
             char* rc = fgets(cb.buff(), e-b+1, mpFile);
             if (rc)
             {
-                rData.push_back(cb.buff());
+                rData.push_back(cb.str(trim));
             }
             else
             {
@@ -467,17 +475,14 @@ bool IndexingCSVParser::hasMoreDataRows()
 
 bool IndexingCSVParser::getHeaderRow(std::vector<string> &rData)
 {
-    bool parseOK = getRow(rData);
+    bool parseOK = getRow(rData, TrimLeadingTrailingSpace);
     if (parseOK) {
         // Strip comment char from first  header item if it is the first char
         if (mCommentChar != '\0' && !rData.empty() && !rData.front().empty()) {
             if (*rData.front().begin() == mCommentChar) {
                 rData.front().erase(0,1);
+                trimLeadingSpaces(rData.front());
             }
-        }
-        // Strip leading and trailing spaces in names
-        for (size_t i=0; i<rData.size(); ++i) {
-            trimLeadingAndTrailingSpaces(rData[i]);
         }
     }
     return parseOK;

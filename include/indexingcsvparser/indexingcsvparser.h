@@ -17,6 +17,7 @@ namespace indcsvp
 {
 
 enum Direction {Row, Column};
+enum TrimSpaceOption {NoTrim, TrimLeadingTrailingSpace};
 
 class HeaderSetting {
 
@@ -65,19 +66,19 @@ public:
     void minMaxNumCols(size_t &rMin, size_t &rMax);
     const std::vector<std::string>& header() const;
 
-    bool getIndexedColumn(const size_t col, std::vector<std::string> &rData);
-    bool getIndexedRow(const size_t row, std::vector<std::string> &rData);
-    std::string getIndexedPos(const size_t row, const size_t col, bool &rParseOK);
+    bool getIndexedColumn(const size_t col, std::vector<std::string> &rData, TrimSpaceOption trim=NoTrim);
+    bool getIndexedRow(const size_t row, std::vector<std::string> &rData, TrimSpaceOption trim=NoTrim);
+    std::string getIndexedPos(const size_t row, const size_t col, bool &rParseOK, TrimSpaceOption trim=NoTrim);
 
-    template <typename T> bool getIndexedColumnAs(const size_t col, std::vector<T> &rData);
-    template <typename T> bool getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData);
-    template <typename T> bool getIndexedRowAs(const size_t row, std::vector<T> &rData);
-    template <typename T> bool getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData);
-    template <typename T> T getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK);
+    template <typename T> bool getIndexedColumnAs(const size_t col, std::vector<T> &rData, TrimSpaceOption trim=NoTrim);
+    template <typename T> bool getIndexedColumnRowRangeAs(const size_t col, const size_t startRow, const size_t numRows, std::vector<T> &rData, TrimSpaceOption trim=NoTrim);
+    template <typename T> bool getIndexedRowAs(const size_t row, std::vector<T> &rData, TrimSpaceOption trim=NoTrim);
+    template <typename T> bool getIndexedRowColumnRangeAs(const size_t row, const size_t startCol, const size_t numCols, std::vector<T> &rData, TrimSpaceOption trim=NoTrim);
+    template <typename T> T getIndexedPosAs(const size_t row, const size_t col, bool &rParseOK, TrimSpaceOption trim=NoTrim);
 
     // ----- Non-indexing access methods -----
-    bool getRow(std::vector<std::string> &rData);
-    template <typename T> bool getRowAs(std::vector<T> &rData);
+    bool getRow(std::vector<std::string> &rData, TrimSpaceOption trim=NoTrim);
+    template <typename T> bool getRowAs(std::vector<T> &rData, TrimSpaceOption trim=NoTrim);
     bool hasMoreDataRows();
 
 protected:
