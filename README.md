@@ -21,10 +21,12 @@ Method 2 is suitable if you have a large data sets and only want to extract (and
 - Indexing allows you to count the number of rows and columns before extracting data. This allows you to reserve memory before extraction and parsing begins.
 - You can extract (and parse) individual rows or columns (if file has been indexed).
 - Template functions allow you to extract data and parse it as a specific type directly, instead of first extracting as string and then converting in an additional step.
+- A header row or column can be specified and extracted.
+- Leading and trailing white-spaces can be trimmed (optional) while parsing data as strings.
 
 ## Current Limitations
-- Error handling is currently absent, it is assumed that no read errors on the file occur.
-- The data file must be "well formed" the same separator charter must be used in the entire file.
+- Error handling is limited, it is assumed that no read errors on the file occur.
+- The data file must be "well formed" the same separator character must be used in the entire file.
 - The parser does not yet support "enclosure". A way to enclose text containing the separator character without it being interpreted as a separator.
 - Supports only CRLF or LF EOL characters.
 - Only supports ASCII input (no Unicode support).
