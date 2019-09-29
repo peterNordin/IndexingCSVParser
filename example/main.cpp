@@ -26,9 +26,12 @@ void printVector(vector<T> &rVector)
 int main(int argc, char *argv[])
 {
     string filePath;
+    int headerIndex=-1;
     if (argc < 2)
     {
         filePath = "../test/testdata_int_comma_h3r11c3_lf.csv";
+        // Row 3 (index 2) is the row-wise header
+        headerIndex = 2;
         cout << "Warning to few arguments! Using default file: " << filePath << endl;
     }
     else
@@ -36,9 +39,13 @@ int main(int argc, char *argv[])
         filePath = argv[1];
     }
     char sepChar = '0';
-    if (argc == 3)
+    if (argc >= 3)
     {
         sepChar = string(argv[2])[0];
+    }
+    if (argc >= 4)
+    {
+        headerIndex = atoi(argv[3]);
     }
 
     cout << "Using CSV file: " << filePath << endl;
@@ -55,29 +62,46 @@ int main(int argc, char *argv[])
     vector<char> possibleSeparators;
     possibleSeparators.push_back(';');
     possibleSeparators.push_back(',');
-    char sep = icsvp.autoSetSeparatorChar(possibleSeparators);
-    cout << "Auto choosing separator char: " << sep << endl;
+    char autoSep = icsvp.autoSetSeparatorChar(possibleSeparators);
+    cout << "Auto choosen separator char: " << autoSep << endl;
     if (sepChar != '0')
     {
-        icsvp.setSeparatorChar(';');
+        icsvp.setSeparatorChar(sepChar);
     }
-    sepChar = icsvp.getSeparatorChar();
-    cout << "Using separator char: " << sepChar << endl;
+    cout << "Using separator char: " << icsvp.getSeparatorChar() << endl;
 
+    if (headerIndex >= 0) {
+        icsvp.setHeaderInfo(Row, static_cast<unsigned>(headerIndex));
+    }
 
     // Index the file
     icsvp.indexFile();
     cout << "File: " << filePath << " has nRows: " << icsvp.numRows() << " nCols: " << icsvp.numCols() << " All rows have same num cols (1 = true): " << icsvp.allRowsHaveSameNumCols() << endl;
 
+    cout << endl << "---------- Header ----------" << endl;
+    if (headerIndex >= 0) {
+        std::vector<std::string> header = icsvp.header();
+        for (size_t h=0; h<header.size(); ++h) {
+            cout << "'" << header[h] << "' ";
+        }
+        cout << std::endl;
+    }
+    else {
+        cout << "No header index given" << endl;
+    }
+
+
     if (icsvp.numRows() < 100 && icsvp.numCols() < 100)
     {
-        cout << "---------- Contents as string (position by position) ----------" << endl;
+        cout << endl << "---------- Contents as string (position by position) ----------" << endl;
         bool parseOK;
         for (size_t r=0; r<icsvp.numRows(); ++r)
         {
             for (size_t c=0; c<icsvp.numCols(r); ++c)
             {
-                cout << icsvp.getIndexedPosAs<std::string>(r,c, parseOK) << " ";
+                // When getting values as string, using Trim might be usefull to remove leading and trailing whitespaces
+                // the default is indcsvp::NoTrim
+                cout << icsvp.getIndexedPosAs<std::string>(r,c, parseOK, indcsvp::TrimLeadingTrailingSpace) << " ";
             }
             cout << endl;
         }
