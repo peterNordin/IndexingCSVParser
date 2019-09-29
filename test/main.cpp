@@ -24,7 +24,8 @@ static vector<TestFile> intFiles { {',', '\0', 2, TrimOption::NoTrim, "testdata_
                                    {',', '\0', 2, TrimOption::NoTrim, "testdata_int_comma_h3r11c3_crlf.csv"},
                                    {';', '\0', 2, TrimOption::NoTrim, "testdata_int_semicolon_h3r11c3_lf.csv"},
                                    {';', '\0', 2, TrimOption::NoTrim, "testdata_int_semicolon_h3r11c3_crlf.csv"},
-                                   {',', '\0', 2, TrimOption::Trim,  "testdata_int_comma-space_h3r11c3_lf.csv"},};
+                                   {',', '\0', 2, TrimOption::Trim,   "testdata_int_comma-space_h3r11c3_lf.csv"},
+                                   {' ', '\0', 2, TrimOption::Trim,   "testdata_int_space_h3r11c3_lf.csv"},};
 
 static vector<TestFile> realFiles {{',', '.', 2, TrimOption::NoTrim, "testdata_real_comma_h3r9c2_lf.csv"},
                                    {',', '.', 2, TrimOption::NoTrim, "testdata_real_comma_h3r9c2_crlf.csv"},
