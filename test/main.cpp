@@ -360,6 +360,27 @@ TEST_CASE("File operations") {
     REQUIRE_FALSE(csvp.fileIsOpen());
 }
 
+TEST_CASE("External file operations") {
+    IndexingCSVParserSpy csvp;
+    char filetemplate[20] {"indscvp-temp-XXXXXX"};
+    int fd = mkstemp(filetemplate);
+    FILE* pTempfile = fdopen(fd, "r+");
+    fputs("1,2,3", pTempfile);
+    rewind(pTempfile);
+
+    csvp.takeOwnershipOfFile(pTempfile);
+    REQUIRE(csvp.fileIsOpen());
+    REQUIRE(csvp.fileIsAtBeginning());
+    csvp.indexFile();
+    REQUIRE(csvp.numRows() == 1);
+    REQUIRE(csvp.numCols() == 3);
+    REQUIRE(csvp.fileIsAtEnd());
+    csvp.rewindFile();
+    REQUIRE(csvp.fileIsAtBeginning());
+    csvp.closeFile();
+    REQUIRE_FALSE(csvp.fileIsOpen());
+}
+
 TEST_CASE("Parse integer data") {
     auto testfile = GENERATE(GeneratorWrapper<TestFile>(std::unique_ptr<IGenerator<TestFile>>(new TestFileGenerator(intFiles))));
 

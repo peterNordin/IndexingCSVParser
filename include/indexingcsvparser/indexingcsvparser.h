@@ -54,6 +54,7 @@ public:
 
     // ----- File methods -----
     bool openFile(const char* filePath);
+    void takeOwnershipOfFile(FILE* pExternalFile);
     void closeFile();
     void rewindFile();
     void readUntilData();

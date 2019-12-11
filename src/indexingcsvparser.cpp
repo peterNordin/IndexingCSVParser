@@ -143,6 +143,14 @@ bool IndexingCSVParser::openFile(const char *filePath)
     return (mpFile != 0);
 }
 
+void IndexingCSVParser::takeOwnershipOfFile(FILE* pExternalFile)
+{
+    if (mpFile != 0) {
+        closeFile();
+    }
+    mpFile = pExternalFile;
+}
+
 //! @brief Close the opened file
 void IndexingCSVParser::closeFile()
 {
