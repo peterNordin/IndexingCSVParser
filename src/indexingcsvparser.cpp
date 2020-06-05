@@ -8,6 +8,7 @@
 
 #include "indexingcsvparser/indexingcsvparser.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <cstdio>
