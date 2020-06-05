@@ -362,9 +362,19 @@ TEST_CASE("File operations") {
 
 TEST_CASE("External file operations") {
     IndexingCSVParserSpy csvp;
+    FILE* pTempfile;
+#if defined(_WIN32)
+    char tmpfilebuff[L_tmpnam];
+    errno_t rc = tmpnam_s(tmpfilebuff, L_tmpnam);
+    REQUIRE(rc == 0);
+    //INFO(tmpfilebuff);
+    pTempfile = fopen(tmpfilebuff, "w+b");
+#else
     char filetemplate[20] {"indscvp-temp-XXXXXX"};
     int fd = mkstemp(filetemplate);
-    FILE* pTempfile = fdopen(fd, "r+");
+    pTempfile = fdopen(fd, "r+");
+#endif
+    REQUIRE(pTempfile != 0);
     fputs("1,2,3", pTempfile);
     rewind(pTempfile);
 
